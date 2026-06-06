@@ -1,0 +1,99 @@
+import * as assert from "assert";
+import { BlinkExtension, type IStatusBar } from "../blinkExtension.js";
+import type { BlinkConfig, IConfigProvider } from "../config/config.js";
+import type { StatusStore } from "../status/statusStore.js";
+import type { ICompletionEngine } from "../completion/completionEngine.js";
+import type { ICompletionClientManager } from "../clients/manager.js";
+import type { ILspContextProvider } from "../context/lspContext.js";
+import type { IInlineCompletionItemProvider } from "../provider/inlineProvider.js";
+import type { ISetupController } from "../setup/setupController.js";
+import { globalConfig } from "./fixtures.js";
+
+function makeFakes() {
+  const calls: string[] = [];
+  let onChangeCb: ((c: BlinkConfig) => void) | undefined;
+  const clientToken = { id: "client" };
+
+  const config: IConfigProvider = {
+    readConfig: () => globalConfig(),
+    onChange: (cb) => { onChangeCb = cb; calls.push("config.onChange"); },
+    getActiveModelConfig: (c) => c.models.find((m) => m.name === c.model),
+    setActiveModel: async () => { calls.push("config.setActiveModel"); },
+    addModel: async () => { calls.push("config.addModel"); },
+    removeModel: async () => { calls.push("config.removeModel"); },
+    setEnabled: async () => { calls.push("config.setEnabled"); },
+  };
+  const status = {
+    setConfig: () => calls.push("status.setConfig"),
+    setWorking: () => {},
+    setError: () => {},
+  } as unknown as StatusStore;
+  const statusBar: IStatusBar = { create: () => calls.push("statusBar.create") };
+  const clients: ICompletionClientManager = {
+    get: () => clientToken as never,
+    onLoadError: () => { calls.push("clients.onLoadError"); },
+    dispose: async () => { calls.push("clients.dispose"); },
+  };
+  const engine: ICompletionEngine = {
+    setClient: () => calls.push("engine.setClient"),
+    prewarm: () => calls.push("engine.prewarm"),
+    complete: async () => ({ text: null, cacheHit: false }),
+  };
+  const inlineProvider = {
+    register: () => calls.push("provider.register"),
+    setEnabled: (e: boolean) => calls.push(`provider.setEnabled:${e}`),
+    setModel: () => calls.push("provider.setModel"),
+    lastPrompt: undefined,
+    provideInlineCompletionItems: () => null,
+  } as unknown as IInlineCompletionItemProvider;
+  const lsp: ILspContextProvider = {
+    collect: async () => [],
+    clear: () => calls.push("lsp.clear"),
+  };
+
+  const setup: ISetupController = {
+    showPicker: async () => { calls.push("setup.showPicker"); },
+    promptFirstRunIfNeeded: () => { calls.push("setup.promptFirstRun"); },
+  };
+
+  const ext = new BlinkExtension(config, status, statusBar, clients, engine, inlineProvider, lsp, setup);
+  return { ext, calls, fire: (c: BlinkConfig) => onChangeCb?.(c) };
+}
+
+suite("BlinkExtension", () => {
+  test("start() registers provider, status bar, and config subscription, then inits", () => {
+    const { ext, calls } = makeFakes();
+    ext.start();
+    assert.ok(calls.includes("provider.register"));
+    assert.ok(calls.includes("statusBar.create"));
+    assert.ok(calls.includes("clients.onLoadError"));
+    assert.ok(calls.includes("config.onChange"));
+    assert.ok(calls.includes("status.setConfig"));
+    assert.ok(calls.includes("engine.setClient"));
+    assert.ok(calls.includes("provider.setModel"));
+    assert.ok(calls.includes("provider.setEnabled:true"));
+  });
+
+  test("a config change re-inits status, client, model, enabled, and clears lsp", () => {
+    const { ext, calls, fire } = makeFakes();
+    ext.start();
+    calls.length = 0;
+    fire(globalConfig({ enabled: false }));
+    assert.deepStrictEqual(
+      calls,
+      ["status.setConfig", "engine.setClient", "provider.setModel", "provider.setEnabled:false", "lsp.clear"],
+    );
+  });
+
+  test("start() gives the setup controller a first-run chance", () => {
+    const { ext, calls } = makeFakes();
+    ext.start();
+    assert.ok(calls.includes("setup.promptFirstRun"));
+  });
+
+  test("dispose() tears down the client manager", async () => {
+    const { ext, calls } = makeFakes();
+    await ext.dispose();
+    assert.ok(calls.includes("clients.dispose"));
+  });
+});

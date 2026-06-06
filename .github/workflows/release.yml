@@ -1,0 +1,49 @@
+name: release
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  package-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Package all platform targets
+        run: |
+          for t in win32-x64 win32-arm64 linux-x64 linux-arm64 darwin-x64 darwin-arm64; do
+            node scripts/package-vsix.mjs "$t"
+          done
+      - name: Audit VSIX contents
+        run: |
+          set -e
+          for f in dist-vsix/*.vsix; do
+            echo "== $f"
+            unzip -l "$f" | grep -q "extension/node_modules/@node-llama-cpp/" || { echo "missing engine binaries"; exit 1; }
+            unzip -l "$f" | grep -q "extension/dist/extension.js" || { echo "missing bundle"; exit 1; }
+            if unzip -l "$f" | grep -E "extension/(docs/|scripts/|src/|CLAUDE.md|package-lock.json)"; then
+              echo "forbidden content packaged"; exit 1
+            fi
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vsix
+          path: dist-vsix/*.vsix
+      - name: Publish to Marketplace
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+        run: |
+          for f in dist-vsix/*.vsix; do
+            npx vsce publish --packagePath "$f"
+          done
+      - name: Attach VSIXs to the GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist-vsix/*.vsix

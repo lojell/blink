@@ -1,0 +1,110 @@
+export type DisplayState = "disabled" | "setup" | "error" | "working" | "idle";
+
+export interface StatusInputs {
+  enabled: boolean;
+  configured: boolean;
+  hasModels: boolean;  // models registry non-empty (false -> first-run setup needed)
+  backend: string;  // active model's backend ("" when none)
+  model: string;    // active model name (the selector)
+  target: string;   // gguf basename / api host / ollama url / "—"
+}
+
+export interface StatusDisplay {
+  state: DisplayState;
+  icon: string;
+  label: string;
+  detail: string;
+  backend: string;
+  model: string;
+  target: string;
+  enabled: boolean;
+}
+
+/**
+ * Single source of truth for blink's runtime status. Pure (no vscode), so the
+ * state -> display mapping is unit-testable. Views subscribe() and re-render.
+ */
+export class StatusStore {
+  private enabled = false;
+  private configured = false;
+  private hasModels = false;
+  private backend = "";
+  private model = "";
+  private target = "";
+  private working = false;
+  private error: string | null = null;
+  private readonly listeners = new Set<() => void>();
+
+  subscribe(listener: () => void): () => void {
+    this.listeners.add(listener);
+    return () => { this.listeners.delete(listener); };
+  }
+
+  private notify(): void {
+    for (const l of this.listeners) { l(); }
+  }
+
+  /** Apply config-derived inputs; clears any prior error (e.g. user fixed settings). */
+  setConfig(inputs: StatusInputs): void {
+    const changed =
+      this.enabled !== inputs.enabled ||
+      this.configured !== inputs.configured ||
+      this.hasModels !== inputs.hasModels ||
+      this.backend !== inputs.backend ||
+      this.model !== inputs.model ||
+      this.target !== inputs.target ||
+      this.error !== null;
+    if (!changed) { return; }
+    this.enabled = inputs.enabled;
+    this.configured = inputs.configured;
+    this.hasModels = inputs.hasModels;
+    this.backend = inputs.backend;
+    this.model = inputs.model;
+    this.target = inputs.target;
+    this.error = null;
+    this.notify();
+  }
+
+  setWorking(working: boolean): void {
+    if (this.working === working) { return; }
+    this.working = working;
+    this.notify();
+  }
+
+  setError(message: string): void {
+    if (this.error === message) { return; }
+    this.error = message;
+    this.notify();
+  }
+
+  getDisplay(): StatusDisplay {
+    const base = {
+      label: "",
+      backend: this.backend,
+      model: this.model,
+      target: this.target,
+      enabled: this.enabled,
+    };
+    if (!this.enabled) {
+      return { ...base, state: "disabled", icon: "$(blink-disabled)", detail: "Disabled" };
+    }
+    if (!this.hasModels) {
+      return {
+        ...base,
+        state: "setup",
+        icon: "$(blink-issue)",
+        detail: "No model set up — pick one to get started",
+      };
+    }
+    if (!this.configured) {
+      return { ...base, state: "setup", icon: "$(blink-issue)", detail: "Model not configured — check its settings" };
+    }
+    if (this.error) {
+      return { ...base, state: "error", icon: "$(blink-issue)", detail: `Error: ${this.error}` };
+    }
+    if (this.working) {
+      return { ...base, state: "working", icon: "$(loading~spin)", detail: "Working…" };
+    }
+    return { ...base, state: "idle", icon: "$(blink-logo)", detail: "Ready" };
+  }
+}
