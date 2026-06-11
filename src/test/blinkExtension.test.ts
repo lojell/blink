@@ -10,6 +10,7 @@ import type { ISetupController } from "../setup/setupController.js";
 import type { ICudaController } from "../setup/cudaController.js";
 import type { IEditTracker } from "../edits/editTracker.js";
 import type { ICommands } from "../commands.js";
+import type { IActiveFileMonitor } from "../status/activeFileMonitor.js";
 import { globalConfig } from "./fixtures.js";
 
 function makeFakes() {
@@ -80,7 +81,11 @@ function makeFakes() {
     register: () => { calls.push("commands.register"); },
   };
 
-  const ext = new BlinkExtension(config, status, statusBar, clients, engine, inlineProvider, lsp, setup, cuda, edits, commands);
+  const activeFile: IActiveFileMonitor = {
+    register: () => { calls.push("activeFile.register"); },
+  };
+
+  const ext = new BlinkExtension(config, status, statusBar, clients, engine, inlineProvider, lsp, setup, cuda, edits, commands, activeFile);
   return { ext, calls, fire: (c: BlinkConfig) => onChangeCb?.(c), fireInstalled: () => onInstalledCb?.() };
 }
 
@@ -92,6 +97,7 @@ suite("BlinkExtension", () => {
     assert.ok(calls.includes("statusBar.create"));
     assert.ok(calls.includes("edits.register"));
     assert.ok(calls.includes("commands.register"));
+    assert.ok(calls.includes("activeFile.register"));
     assert.ok(calls.includes("clients.onLoadError"));
     assert.ok(calls.includes("config.onChange"));
     assert.ok(calls.includes("status.setConfig"));
