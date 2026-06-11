@@ -46,6 +46,10 @@ export class CudaController implements ICudaController {
   }
 
   async canInstall(): Promise<boolean> {
+    // After an extension update the links are gone but storage persists;
+    // restore them before reading the installed state, or a persisted
+    // install looks missing and gets offered again.
+    await this.ensureLinks();
     return this.installer.supported()
       && await this.installer.isNvidiaDriverPresent()
       && !(await this.installer.isInstalled());
@@ -53,6 +57,9 @@ export class CudaController implements ICudaController {
 
   async offerIfApplicable(model: LlamaCppModelConfig): Promise<void> {
     if (this.offered) { return; }
+    // Same as canInstall: don't race the fire-and-forget ensureLinks in
+    // BlinkExtension.start() — a stale "not installed" here pops the offer.
+    await this.ensureLinks();
     const offer = shouldOfferCuda({
       platform: process.platform,
       arch: process.arch,
