@@ -1,5 +1,5 @@
 {
-  "name": "blink",
+  "name": "blink-for-vscode",
   "displayName": "Blink - Local AI Code Completions",
   "description": "Lightning-fast inline AI completions (ghost text), local-first and BYOK: GGUF models in-process via llama.cpp, or any OpenAI-compatible endpoint.",
   "version": "0.1.0",

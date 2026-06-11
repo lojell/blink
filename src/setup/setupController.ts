@@ -68,7 +68,7 @@ export class SetupController implements ISetupController {
     } else if (picked.kind === "cuda") {
       await this.cuda.install();
     } else if (picked.kind === "settings") {
-      await vscode.commands.executeCommand("workbench.action.openSettings", "@ext:lojell.blink");
+      await vscode.commands.executeCommand("workbench.action.openSettings", "@ext:lojell.blink-for-vscode");
     } else {
       await this.config.setEnabled(!picked.enabled);
     }
