@@ -116,7 +116,7 @@ export class BlinkInlineProvider implements IInlineCompletionItemProvider {
     const controller = new AbortController();
     const sub = token.onCancellationRequested(() => controller.abort());
 
-    this.status.setWorking(true);
+    // this.status.setWorking(true);
     const started = Date.now();
     try {
       /*
@@ -159,7 +159,7 @@ export class BlinkInlineProvider implements IInlineCompletionItemProvider {
       this.log.info(`provideInlineCompletionItems error: ${String(err)}`);
       return null;
     } finally {
-      this.status.setWorking(false);
+      // this.status.setWorking(false);
       sub.dispose();
     }
   }
