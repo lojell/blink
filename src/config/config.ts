@@ -11,6 +11,7 @@ export interface BlinkConfig {
   enabled: boolean;
   model: string;            // selector: the active model's `name`
   models: ModelConfig[];
+  disabledFiles: string[];  // filename globs (basename match) where blink is off
   debounceMs: number;
   maxPrefixChars: number;
   maxSuffixChars: number;
@@ -27,6 +28,7 @@ const DEFAULTS: BlinkConfig = {
   enabled: true,
   model: "",
   models: [],
+  disabledFiles: ["*.md", "*.markdown"],
   debounceMs: 200,
   maxPrefixChars: 2000,
   maxSuffixChars: 1000,
@@ -53,6 +55,10 @@ export interface IConfigProvider {
   removeModel(name: string): Promise<void>;
   /** Turn completions on/off (blink.enabled). Global scope. */
   setEnabled(enabled: boolean): Promise<void>;
+  /** Append a pattern to blink.disabledFiles (no-op if present). Global scope. */
+  addDisabledFile(pattern: string): Promise<void>;
+  /** Remove every entry equal to the pattern from blink.disabledFiles. Global scope. */
+  removeDisabledFile(pattern: string): Promise<void>;
 }
 
 export class BlinkConfigProvider implements IConfigProvider {
@@ -62,10 +68,12 @@ export class BlinkConfigProvider implements IConfigProvider {
   readConfig(): BlinkConfig {
     const c = vscode.workspace.getConfiguration("blink");
     const models = c.get<ModelConfig[]>("models", []);
+    const disabledFiles = c.get<string[]>("disabledFiles", DEFAULTS.disabledFiles);
     return {
       enabled: c.get("enabled", DEFAULTS.enabled),
       model: c.get("model", DEFAULTS.model),
       models: Array.isArray(models) ? models : [],
+      disabledFiles: Array.isArray(disabledFiles) ? disabledFiles : [],
       debounceMs: c.get("debounceMs", DEFAULTS.debounceMs),
       maxPrefixChars: c.get("maxPrefixChars", DEFAULTS.maxPrefixChars),
       maxSuffixChars: c.get("maxSuffixChars", DEFAULTS.maxSuffixChars),
@@ -86,6 +94,20 @@ export class BlinkConfigProvider implements IConfigProvider {
   async setEnabled(enabled: boolean): Promise<void> {
     await vscode.workspace.getConfiguration(BLINK_NAME)
       .update("enabled", enabled, vscode.ConfigurationTarget.Global);
+  }
+
+  async addDisabledFile(pattern: string): Promise<void> {
+    const patterns = this.readConfig().disabledFiles;
+    if (patterns.includes(pattern)) { return; }
+    await vscode.workspace.getConfiguration(BLINK_NAME)
+      .update("disabledFiles", [...patterns, pattern], vscode.ConfigurationTarget.Global);
+  }
+
+  async removeDisabledFile(pattern: string): Promise<void> {
+    const patterns = this.readConfig().disabledFiles;
+    if (!patterns.includes(pattern)) { return; }
+    await vscode.workspace.getConfiguration(BLINK_NAME)
+      .update("disabledFiles", patterns.filter((p) => p !== pattern), vscode.ConfigurationTarget.Global);
   }
 
   async setActiveModel(name: string): Promise<void> {

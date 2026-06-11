@@ -25,6 +25,8 @@ function makeFakes() {
     addModel: async () => { calls.push("config.addModel"); },
     removeModel: async () => { calls.push("config.removeModel"); },
     setEnabled: async () => { calls.push("config.setEnabled"); },
+    addDisabledFile: async () => { calls.push("config.addDisabledFile"); },
+    removeDisabledFile: async () => { calls.push("config.removeDisabledFile"); },
   };
   const status = {
     setConfig: () => calls.push("status.setConfig"),

@@ -25,6 +25,7 @@ export function ollamaModel(over: Partial<OllamaModelConfig> = {}): OllamaModelC
 export function globalConfig(over: Partial<BlinkConfig> = {}): BlinkConfig {
   return {
     enabled: true, model: "local-qwen", models: [llamaModel()],
+    disabledFiles: [],
     debounceMs: 0, maxPrefixChars: 2000, maxSuffixChars: 1000,
     recentEditsEnabled: true, recentEditsMaxSnippets: 3, recentEditsMaxChars: 800,
     lspContextEnabled: false, lspContextMaxSnippets: 3, lspContextMaxChars: 600,

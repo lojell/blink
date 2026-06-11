@@ -83,6 +83,17 @@
           "default": true,
           "description": "Enable blink inline completions."
         },
+        "blink.disabledFiles": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "*.md",
+            "*.markdown"
+          ],
+          "description": "File name glob patterns where blink completions are disabled (matched against the file name, e.g. \"*.md\" or \"Makefile\"). `*` and `?` are supported."
+        },
         "blink.model": {
           "type": "string",
           "default": "",
