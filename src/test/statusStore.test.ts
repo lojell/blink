@@ -136,4 +136,58 @@ suite("StatusStore", () => {
     s.setWorking(true);
     assert.strictEqual(n, 0);
   });
+
+  test("active-file match shows 'Disabled for <pattern>' with the disabled glyph", () => {
+    const s = new StatusStore();
+    s.setConfig(inputs());
+    s.setActiveFile({ filePattern: "*.md", matchedPattern: "*.md" });
+    const d = s.getDisplay();
+    assert.strictEqual(d.state, "disabled");
+    assert.strictEqual(d.icon, "$(blink-disabled)");
+    assert.strictEqual(d.detail, "Disabled for *.md");
+  });
+
+  test("error takes precedence over a blacklisted active file", () => {
+    const s = new StatusStore();
+    s.setConfig(inputs());
+    s.setActiveFile({ filePattern: "*.md", matchedPattern: "*.md" });
+    s.setError("boom");
+    assert.strictEqual(s.getDisplay().state, "error");
+  });
+
+  test("a blacklisted active file takes precedence over working", () => {
+    const s = new StatusStore();
+    s.setConfig(inputs());
+    s.setWorking(true);
+    s.setActiveFile({ filePattern: "*.md", matchedPattern: "*.md" });
+    assert.strictEqual(s.getDisplay().state, "disabled");
+  });
+
+  test("display exposes filePattern and matchedPattern for the tooltip", () => {
+    const s = new StatusStore();
+    s.setConfig(inputs());
+    s.setActiveFile({ filePattern: "*.ts", matchedPattern: null });
+    const d = s.getDisplay();
+    assert.strictEqual(d.filePattern, "*.ts");
+    assert.strictEqual(d.matchedPattern, null);
+    assert.strictEqual(d.state, "idle");
+  });
+
+  test("filePattern defaults to null (no active file editor)", () => {
+    const s = new StatusStore();
+    s.setConfig(inputs());
+    assert.strictEqual(s.getDisplay().filePattern, null);
+    assert.strictEqual(s.getDisplay().matchedPattern, null);
+  });
+
+  test("setActiveFile with identical values does not notify", () => {
+    const s = new StatusStore();
+    s.setActiveFile({ filePattern: "*.ts", matchedPattern: null });
+    let n = 0;
+    s.subscribe(() => { n++; });
+    s.setActiveFile({ filePattern: "*.ts", matchedPattern: null });
+    assert.strictEqual(n, 0);
+    s.setActiveFile({ filePattern: "*.md", matchedPattern: "*.md" });
+    assert.strictEqual(n, 1);
+  });
 });

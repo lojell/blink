@@ -12,6 +12,8 @@ function display(over: Partial<StatusDisplay> = {}): StatusDisplay {
     model: "local-qwen",
     target: "qwen2.5-coder-3b-base-q6_k.gguf",
     enabled: true,
+    filePattern: null,
+    matchedPattern: null,
     ...over,
   };
 }

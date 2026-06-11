@@ -9,6 +9,11 @@ export interface StatusInputs {
   target: string;   // gguf basename / api host / ollama url / "—"
 }
 
+export interface ActiveFileStatus {
+  filePattern: string | null;    // toggle target for the active file ("*.ts"); null = no file editor
+  matchedPattern: string | null; // blacklist entry blocking it, or null
+}
+
 export interface StatusDisplay {
   state: DisplayState;
   icon: string;
@@ -18,6 +23,8 @@ export interface StatusDisplay {
   model: string;
   target: string;
   enabled: boolean;
+  filePattern: string | null;
+  matchedPattern: string | null;
 }
 
 /**
@@ -33,6 +40,8 @@ export class StatusStore {
   private target = "";
   private working = false;
   private error: string | null = null;
+  private filePattern: string | null = null;
+  private matchedPattern: string | null = null;
   private readonly listeners = new Set<() => void>();
 
   subscribe(listener: () => void): () => void {
@@ -77,6 +86,14 @@ export class StatusStore {
     this.notify();
   }
 
+  /** Track the active editor's blacklist status (fed by ActiveFileMonitor). */
+  setActiveFile(file: ActiveFileStatus): void {
+    if (this.filePattern === file.filePattern && this.matchedPattern === file.matchedPattern) { return; }
+    this.filePattern = file.filePattern;
+    this.matchedPattern = file.matchedPattern;
+    this.notify();
+  }
+
   getDisplay(): StatusDisplay {
     const base = {
       label: "",
@@ -84,6 +101,8 @@ export class StatusStore {
       model: this.model,
       target: this.target,
       enabled: this.enabled,
+      filePattern: this.filePattern,
+      matchedPattern: this.matchedPattern,
     };
     if (!this.enabled) {
       return { ...base, state: "disabled", icon: "$(blink-disabled)", detail: "Disabled" };
@@ -101,6 +120,9 @@ export class StatusStore {
     }
     if (this.error) {
       return { ...base, state: "error", icon: "$(blink-issue)", detail: `Error: ${this.error}` };
+    }
+    if (this.matchedPattern) {
+      return { ...base, state: "disabled", icon: "$(blink-disabled)", detail: `Disabled for ${this.matchedPattern}` };
     }
     if (this.working) {
       return { ...base, state: "working", icon: "$(loading~spin)", detail: "Working…" };
