@@ -1,27 +1,27 @@
-# blink — Local AI Code Completions
+# Blink — Local AI Code Completions
 
-**AI ghost text that appears in a blink — running entirely on your machine.**
+**AI ghost text that appears in a Blink — running entirely on your machine.**
 
-blink brings lightning-fast inline completions to VS Code, **local-first** and
+Blink brings lightning-fast inline completions to VS Code, **local-first** and
 **bring-your-own-key**. Run a GGUF code model **in-process** via
 [llama.cpp](https://github.com/ggml-org/llama.cpp) — no server, no account, no
-cloud, no subscription — or point blink at any OpenAI-compatible
+cloud, no subscription — or point Blink at any OpenAI-compatible
 `/v1/completions` endpoint with your own key.
 
-![blink completing code in VS Code](media/blink.gif)
+![Blink completing code in VS Code](media/Blink.gif)
 
 ## Quick start
 
-1. Install blink and open any code file.
-2. Run **blink: Select Model…** (Command Palette, or click the blink status
-   bar item) and pick a recommended model — blink downloads it with progress.
+1. Install Blink and open any code file.
+2. Run **Blink: Select Model…** (Command Palette, or click the Blink status
+   bar item) and pick a recommended model — Blink downloads it with progress.
 3. Type. Ghost text appears; press `Tab` to accept.
 
 That's it — no API key, no account, no setup beyond picking a model. To use
 your own endpoint instead, add an entry to `blink.models` (below) and select
-it via **blink: Select Model…** or the `blink.model` setting.
+it via **Blink: Select Model…** or the `blink.model` setting.
 
-## Why blink?
+## Why Blink?
 
 - **Private by default** — with a local model, your code never leaves your
   machine. No telemetry, ever.
@@ -35,14 +35,14 @@ it via **blink: Select Model…** or the `blink.model` setting.
 - **Inline ghost text** as you type, accepted with `Tab` — driven by native
   fill-in-the-middle (FIM), not chat prompting.
 - **Local models, in-process** — pick a recommended Qwen2.5-Coder GGUF
-  (0.5B–7B) and blink downloads and runs it inside VS Code. Nothing leaves
+  (0.5B–7B) and Blink downloads and runs it inside VS Code. Nothing leaves
   your machine.
 - **BYOK remote option** — any OpenAI-compatible completions endpoint (vLLM,
   llama-server, TGI, a cloud provider) with your own key.
 - **Model registry** — configure several models once, switch instantly with
-  **blink: Select Model…** from the palette or the status bar.
+  **Blink: Select Model…** from the palette or the status bar.
 - **GPU out of the box** — Vulkan on Windows/Linux x64, Metal on Apple
-  Silicon; CPU works everywhere. On NVIDIA machines blink offers a one-click
+  Silicon; CPU works everywhere. On NVIDIA machines Blink offers a one-click
   **CUDA** download (~580 MB) for peak throughput.
 - **Status bar control** — live state plus hover actions: settings, model
   switch, enable/disable.
@@ -51,7 +51,7 @@ it via **blink: Select Model…** or the `blink.model` setting.
 
 - **RAM ≈ model size**: ~0.7 GB for the smallest recommended quant, ~4.7 GB
   for the 7B. A GPU is optional but recommended (Vulkan / Metal).
-- **Local models must support FIM** (fill-in-the-middle). blink rejects GGUFs
+- **Local models must support FIM** (fill-in-the-middle). Blink rejects GGUFs
   without infill tokens at load — base *coder* models work (Qwen2.5-Coder);
   instruct/chat models usually don't.
 - Platforms: Windows x64 & arm64, Linux x64 & arm64, macOS Intel & Apple
@@ -70,7 +70,7 @@ One registry entry per model; the two backends:
 ```jsonc
 "blink.models": [
   {
-    "name": "local-qwen",                // select with "blink.model": "local-qwen"
+    "name": "local-qwen",                // select with "Blink.model": "local-qwen"
     "backend": "llamacpp",
     "modelId": "qwen2.5-coder",
     "localModelPath": "C:/models/Qwen2.5-Coder-3B-Q6_K.gguf",
@@ -102,11 +102,11 @@ One registry entry per model; the two backends:
 ## Known limitations (v0.1)
 
 - **CUDA is a separate download** — the VSIX ships Vulkan (which already
-  accelerates NVIDIA); blink offers the ~580 MB CUDA binaries when it detects
-  an NVIDIA GPU, or via **blink: Select Model…**.
+  accelerates NVIDIA); Blink offers the ~580 MB CUDA binaries when it detects
+  an NVIDIA GPU, or via **Blink: Select Model…**.
 - **No ollama backend yet** — point the `openai` backend at any
   OpenAI-compatible server instead.
-- Completions only — blink is not a chat assistant.
+- Completions only — Blink is not a chat assistant.
 - Prompt caching, latency tuning, and richer context sources (recent edits,
   LSP signatures) are in active development.
 
