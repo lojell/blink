@@ -6,6 +6,7 @@ import { ICompletionClientManager } from "./clients/manager.js";
 import { ILspContextProvider } from "./context/lspContext.js";
 import { IInlineCompletionItemProvider } from "./provider/inlineProvider.js";
 import { ISetupController } from "./setup/setupController.js";
+import { ICudaController } from "./setup/cudaController.js";
 import { token, Inject } from "./di/container.js";
 
 export interface IStatusBar {
@@ -30,12 +31,21 @@ export class BlinkExtension {
     @IInlineCompletionItemProvider private readonly inlineProvider: IInlineCompletionItemProvider,
     @ILspContextProvider private readonly lsp: ILspContextProvider,
     @ISetupController private readonly setup: ISetupController,
+    @ICudaController private readonly cuda: ICudaController,
   ) {}
 
   start(): void {
+    // Restore CUDA links early (no-op unless installed): the engine loads
+    // lazily on the first completion, well after this resolves.
+    void this.cuda.ensureLinks();
     this.inlineProvider.register();
     this.statusBar.create();
     this.clients.onLoadError(() => this.status.setError("model load failed"));
+    this.cuda.onInstalled(() => {
+      // Drop the Vulkan-loaded engine so the next completion loads via CUDA.
+      void this.clients.dispose();
+      this.init(this.config.readConfig());
+    });
     this.config.onChange((config) => this.init(config));
     const config = this.config.readConfig();
     this.init(config);
@@ -69,6 +79,9 @@ export class BlinkExtension {
     this.inlineProvider.setModel(clientReady ? active : undefined);
     this.inlineProvider.setEnabled(config.enabled && clientReady);
     this.lsp.clear();
+    if (clientReady && active?.backend === "llamacpp") {
+      void this.cuda.offerIfApplicable(active);
+    }
   }
 
   async dispose(): Promise<void> {

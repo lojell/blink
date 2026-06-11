@@ -7,6 +7,7 @@ import type { ICompletionClientManager } from "../clients/manager.js";
 import type { ILspContextProvider } from "../context/lspContext.js";
 import type { IInlineCompletionItemProvider } from "../provider/inlineProvider.js";
 import type { ISetupController } from "../setup/setupController.js";
+import type { ICudaController } from "../setup/cudaController.js";
 import { globalConfig } from "./fixtures.js";
 
 function makeFakes() {
@@ -56,8 +57,17 @@ function makeFakes() {
     promptFirstRunIfNeeded: () => { calls.push("setup.promptFirstRun"); },
   };
 
-  const ext = new BlinkExtension(config, status, statusBar, clients, engine, inlineProvider, lsp, setup);
-  return { ext, calls, fire: (c: BlinkConfig) => onChangeCb?.(c) };
+  let onInstalledCb: (() => void) | undefined;
+  const cuda: ICudaController = {
+    ensureLinks: async () => { calls.push("cuda.ensureLinks"); },
+    offerIfApplicable: async () => { calls.push("cuda.offer"); },
+    canInstall: async () => false,
+    install: async () => { calls.push("cuda.install"); },
+    onInstalled: (cb) => { onInstalledCb = cb; calls.push("cuda.onInstalled"); },
+  };
+
+  const ext = new BlinkExtension(config, status, statusBar, clients, engine, inlineProvider, lsp, setup, cuda);
+  return { ext, calls, fire: (c: BlinkConfig) => onChangeCb?.(c), fireInstalled: () => onInstalledCb?.() };
 }
 
 suite("BlinkExtension", () => {
@@ -72,6 +82,9 @@ suite("BlinkExtension", () => {
     assert.ok(calls.includes("engine.setClient"));
     assert.ok(calls.includes("provider.setModel"));
     assert.ok(calls.includes("provider.setEnabled:true"));
+    assert.ok(calls.includes("cuda.ensureLinks"));
+    assert.ok(calls.includes("cuda.onInstalled"));
+    assert.ok(calls.includes("cuda.offer"));
   });
 
   test("a config change re-inits status, client, model, enabled, and clears lsp", () => {
@@ -81,8 +94,18 @@ suite("BlinkExtension", () => {
     fire(globalConfig({ enabled: false }));
     assert.deepStrictEqual(
       calls,
-      ["status.setConfig", "engine.setClient", "provider.setModel", "provider.setEnabled:false", "lsp.clear"],
+      ["status.setConfig", "engine.setClient", "provider.setModel", "provider.setEnabled:false", "lsp.clear", "cuda.offer"],
     );
+  });
+
+  test("a CUDA install disposes the active client and re-inits", () => {
+    const { ext, calls, fireInstalled } = makeFakes();
+    ext.start();
+    calls.length = 0;
+    fireInstalled();
+    assert.ok(calls.includes("clients.dispose"));
+    assert.ok(calls.includes("status.setConfig"));
+    assert.ok(calls.includes("engine.setClient"));
   });
 
   test("start() gives the setup controller a first-run chance", () => {

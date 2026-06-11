@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import * as path from "node:path";
 import { BlinkConfigProvider, IConfigProvider } from "./config/config.js";
 import { CompletionClientManager, ICompletionClientManager } from "./clients/manager.js";
 import { BackendRegistry, IBackendRegistry } from "./clients/backends.js";
@@ -17,6 +18,8 @@ import { BlinkExtension, IStatusBar } from "./blinkExtension.js";
 import { FimTemplates } from "./completion/fimTemplates.js";
 import { ModelDownloader, IModelDownloader } from "./setup/modelDownloader.js";
 import { SetupController, ISetupController } from "./setup/setupController.js";
+import { CudaInstaller, ICudaInstaller } from "./setup/cudaInstaller.js";
+import { CudaController, ICudaController } from "./setup/cudaController.js";
 import { Container } from "./di/container.js";
 import { ExtensionContext } from "./di/vscodeTokens.js";
 
@@ -45,6 +48,12 @@ export function activate(context: vscode.ExtensionContext) {
     c.register(ICompletionComposer, CompletionComposer);
     c.register(IInlineCompletionItemProvider, BlinkInlineProvider);
     c.register(IModelDownloader, ModelDownloader);
+    c.register(ICudaInstaller, (cc) => new CudaInstaller({
+      storageDir: path.join(context.globalStorageUri.fsPath, "cuda"),
+      extensionRoot: context.extensionPath,
+      downloader: cc.get(IModelDownloader),
+    }));
+    c.register(ICudaController, CudaController);
     c.register(ISetupController, SetupController);
     c.register(BlinkExtension);
 
