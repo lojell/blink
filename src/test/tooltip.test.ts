@@ -19,20 +19,18 @@ function display(over: Partial<StatusDisplay> = {}): StatusDisplay {
 suite("renderTooltipMarkdown", () => {
   test("header line shows Blink, the version, and a Settings link scoped to blink", () => {
     const md = renderTooltipMarkdown(display(), "0.1.0");
-    assert.ok(md.includes("**$(sparkle) Blink** 0.1.0"));
+    assert.ok(md.includes("**$(sparkle) Blink** · v0.1.0"));
     assert.ok(md.includes("[$(gear) Settings](command:workbench.action.openSettings?%22blink%22)"));
   });
 
-  test("renders three rows separated by horizontal rules — header / model / toggle", () => {
+  test("renders three rows separated by horizontal rules — header / model / actions", () => {
     const md = renderTooltipMarkdown(display(), "0.1.0");
     assert.strictEqual(md.split("\n\n---\n\n").length, 3); // two rules => three rows
-    assert.ok(!md.includes("|")); // stacked rows, not a table
   });
 
-  test("model line shows the current model with a Change link", () => {
+  test("model line is a switch link", () => {
     const md = renderTooltipMarkdown(display({ model: "local-qwen" }), "0.1.0");
-    assert.ok(md.includes("local-qwen"));
-    assert.ok(md.includes("[Change](command:blink.switchModel)"));
+    assert.ok(md.includes("[local-qwen $(chevron-down)](command:blink.switchModel)"));
   });
 
   test("long model names are ellipsized to keep the tooltip aligned", () => {
@@ -55,7 +53,7 @@ suite("renderTooltipMarkdown", () => {
 
   test("toggle line shows an Enable link when disabled", () => {
     const md = renderTooltipMarkdown(display({ enabled: false }), "0.1.0");
-    assert.ok(md.includes("[$(run) Enable](command:blink.enable)"));
+    assert.ok(md.includes("[$(blink-logo) Enable](command:blink.enable)"));
     assert.ok(!md.includes("command:blink.disable"));
   });
 });
