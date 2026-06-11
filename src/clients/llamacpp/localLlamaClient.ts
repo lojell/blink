@@ -135,11 +135,12 @@ export class LocalLlamaCompletionClient implements ManagedClient {
       this.loadFailed = true;
       if (!this.notifiedLoadError) {
         this.notifiedLoadError = true;
+        this.log.info(`model load failed: ${String(err)}`);
         const message =
           err instanceof UnsupportedModelError
             ? err.message
-            : "blink: failed to load the local model. Check the model's localModelPath. " +
-            "See the blink output channel for details.";
+            : "blink: failed to load the local model: " +
+            (err instanceof Error ? err.message : String(err));
         this.log.error(message);          // logs + vscode error popup
         this.loadErrorListener(message);  // status-bar signal (manager -> start())
       }

@@ -157,6 +157,38 @@ suite("LocalLlamaCompletionClient", () => {
     assert.deepStrictEqual(listened, errors);
   });
 
+  test("includes the underlying error message in the load failure report", async () => {
+    const errors: string[] = [];
+    const listened: string[] = [];
+    const c = new LocalLlamaCompletionClient(
+      async () => { throw new Error("A context size of 24 is too large for the available VRAM"); },
+      { info: () => {}, error: (m) => { errors.push(m); } },
+    );
+    c.onLoadError((m) => listened.push(m));
+    c.setConfig(llamaModel());
+    await c.complete("a", [], sig());
+    assert.strictEqual(errors.length, 1);
+    assert.ok(
+      errors[0].includes("A context size of 24 is too large for the available VRAM"),
+      `expected underlying detail in: ${errors[0]}`,
+    );
+    assert.deepStrictEqual(listened, errors);
+  });
+
+  test("logs the underlying load error to the output channel", async () => {
+    const infos: string[] = [];
+    const c = new LocalLlamaCompletionClient(
+      async () => { throw new Error("CUDA out of memory"); },
+      { info: (m) => { infos.push(m); }, error: () => {} },
+    );
+    c.setConfig(llamaModel());
+    await c.complete("a", [], sig());
+    assert.ok(
+      infos.some((m) => m.includes("CUDA out of memory")),
+      `expected the raw error in the channel log, got: ${JSON.stringify(infos)}`,
+    );
+  });
+
   test("surfaces the specific message for an UnsupportedModelError", async () => {
     const errors: string[] = [];
     const c = new LocalLlamaCompletionClient(
