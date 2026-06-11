@@ -10,6 +10,7 @@ export type PickEntry =
   | { kind: "configured"; name: string; target: string; active: boolean }
   | { kind: "recommended"; name: string; tags: string[]; rec: RecommendedModel }
   | { kind: "custom" }
+  | { kind: "cuda" }
   | { kind: "toggle"; enabled: boolean }
   | { kind: "settings" };
 
@@ -19,6 +20,7 @@ export function buildPickEntries(
   recommended: RecommendedModel[],
   activeName: string,
   enabled: boolean,
+  cudaAvailable = false,
 ): PickEntry[] {
   const configured = models.map((m) => ({
     kind: "configured" as const,
@@ -30,7 +32,13 @@ export function buildPickEntries(
   const recs = recommended
     .filter((r) => !taken.has(r.name))
     .map((r) => ({ kind: "recommended" as const, name: r.name, tags: r.tags, rec: r }));
-  return [...configured, ...recs, { kind: "custom" as const }, { kind: "toggle" as const, enabled }];
+  return [
+    ...configured,
+    ...recs,
+    { kind: "custom" as const },
+    ...(cudaAvailable ? [{ kind: "cuda" as const }] : []),
+    { kind: "toggle" as const, enabled },
+  ];
 }
 
 export function isUrl(source: string): boolean {

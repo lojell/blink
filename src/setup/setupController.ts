@@ -7,6 +7,7 @@ import { ILogger } from "../common/logging.js";
 import { token } from "../di/container.js";
 import { ExtensionContext } from "../di/vscodeTokens.js";
 import { IModelDownloader } from "./modelDownloader.js";
+import { ICudaController } from "./cudaController.js";
 import {
   RECOMMENDED_MODELS, recommendedToModelConfig, type RecommendedModel,
 } from "./recommendedModels.js";
@@ -35,6 +36,7 @@ export class SetupController implements ISetupController {
     @IModelDownloader private readonly downloader: IModelDownloader,
     @ExtensionContext private readonly context: vscode.ExtensionContext,
     @ILogger private readonly logger: ILogger,
+    @ICudaController private readonly cuda: ICudaController,
   ) { }
 
   promptFirstRunIfNeeded(config: BlinkConfig): void {
@@ -49,7 +51,8 @@ export class SetupController implements ISetupController {
 
   async showPicker(): Promise<void> {
     const config = this.config.readConfig();
-    const entries = buildPickEntries(config.models, RECOMMENDED_MODELS, config.model, config.enabled);
+    const entries = buildPickEntries(
+      config.models, RECOMMENDED_MODELS, config.model, config.enabled, await this.cuda.canInstall());
     const picked = await this.pick(this.toItems(entries));
     if (!picked) { return; }
     // When the picker was opened from the status bar, closing it restores focus
@@ -62,6 +65,8 @@ export class SetupController implements ISetupController {
       await this.installRecommended(picked.rec);
     } else if (picked.kind === "custom") {
       await this.installCustom();
+    } else if (picked.kind === "cuda") {
+      await this.cuda.install();
     } else if (picked.kind === "settings") {
       await vscode.commands.executeCommand("workbench.action.openSettings", "@ext:lojell.blink");
     } else {
@@ -95,6 +100,14 @@ export class SetupController implements ISetupController {
       label: "$(edit) Custom model…",
       description: "local .gguf path or download URL",
     });
+    const cuda = entries.find((e) => e.kind === "cuda");
+    if (cuda) {
+      items.push({
+        entry: cuda,
+        label: "$(rocket) Enable CUDA acceleration",
+        description: "NVIDIA GPU detected — ~580 MB download",
+      });
+    }
     items.push({ label: "", kind: vscode.QuickPickItemKind.Separator });
     const toggle = entries.find((e) => e.kind === "toggle");
     if (toggle?.kind === "toggle") {

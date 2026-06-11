@@ -36,6 +36,15 @@ suite("modelPicker", () => {
       assert.strictEqual(e.target, "m.gguf");
     });
 
+    test("a cuda entry appears between custom and toggle only when available", () => {
+      const withCuda = buildPickEntries([], [], "", true, true);
+      assert.deepStrictEqual(withCuda.map((e) => e.kind), ["custom", "cuda", "toggle"]);
+      const without = buildPickEntries([], [], "", true, false);
+      assert.deepStrictEqual(without.map((e) => e.kind), ["custom", "toggle"]);
+      const defaulted = buildPickEntries([], [], "", true);
+      assert.deepStrictEqual(defaulted.map((e) => e.kind), ["custom", "toggle"]);
+    });
+
     test("the toggle entry carries the current enabled state", () => {
       const on = buildPickEntries([], [], "", true).find((e) => e.kind === "toggle");
       assert.ok(on?.kind === "toggle" && on.enabled === true);
