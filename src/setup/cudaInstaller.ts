@@ -1,8 +1,10 @@
+import { createHash } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import * as tar from "tar";
 import { token } from "../di/container.js";
 import type { IModelDownloader } from "./modelDownloader.js";
-import { cudaVariants } from "./cudaSupport.js";
+import { cudaVariants, expectedSha512, registryVersionUrl, tarballInfo } from "./cudaSupport.js";
 
 export interface CudaProgress {
   variant: string;          // package suffix, e.g. "win-x64-cuda"
@@ -40,6 +42,12 @@ export interface CudaInstallerOptions {
 
 async function exists(p: string): Promise<boolean> {
   try { await fs.promises.access(p); return true; } catch { return false; }
+}
+
+async function defaultFetchJson(url: string): Promise<unknown> {
+  const res = await fetch(url);
+  if (!res.ok) { throw new Error(`blink: npm registry request failed: HTTP ${res.status}`); }
+  return res.json();
 }
 
 /**
@@ -119,10 +127,113 @@ export class CudaInstaller implements ICudaInstaller {
   }
 
   async ensureLinks(): Promise<void> {
-    throw new Error("not implemented"); // next: install/links
+    const variants = this.variants();
+    const pinned = await this.pinnedVersion();
+    if (!variants || !pinned) { return; }
+    for (const v of variants) {
+      if (await this.versionAt(this.storedDir(pinned, v)) !== pinned) { return; } // storage incomplete
+    }
+    for (const v of variants) { await this.link(v, pinned); }
   }
 
-  async install(_signal: AbortSignal, _onProgress: (p: CudaProgress) => void): Promise<void> {
-    throw new Error("not implemented"); // next: install/links
+  async install(signal: AbortSignal, onProgress: (p: CudaProgress) => void): Promise<void> {
+    const variants = this.variants();
+    const pinned = await this.pinnedVersion();
+    if (!variants || !pinned) {
+      throw new Error("blink: prebuilt CUDA binaries are not available for this platform");
+    }
+    try {
+      for (let i = 0; i < variants.length; i++) {
+        const variant = variants[i];
+        await this.installVariant(variant, pinned, signal, (received, total) =>
+          onProgress({ variant, index: i, count: variants.length, received, total }));
+      }
+    } catch (err) {
+      await fs.promises.rm(path.join(this.opts.storageDir, pinned), { recursive: true, force: true });
+      throw err;
+    }
+    for (const v of variants) { await this.link(v, pinned); }
+    await this.gc(pinned);
+  }
+
+  /** Download + verify + extract one package into storage (idempotent across windows). */
+  private async installVariant(
+    variant: string,
+    version: string,
+    signal: AbortSignal,
+    onProgress: (received: number, total: number | undefined) => void,
+  ): Promise<void> {
+    const dest = this.storedDir(version, variant);
+    if (await this.versionAt(dest) === version) { return; } // already there (e.g. another window)
+
+    const fetchJson = this.opts.fetchJson ?? defaultFetchJson;
+    const meta = await fetchJson(registryVersionUrl(`@node-llama-cpp/${variant}`, version));
+    const { url, integrity } = tarballInfo(meta);
+
+    const tgz = path.join(this.opts.storageDir, `${variant}-${version}.tgz`);
+    const tmp = `${dest}.tmp`;
+    try {
+      await this.opts.downloader.download(url, tgz, signal, (p) => onProgress(p.received, p.total));
+      await this.verifySha512(tgz, expectedSha512(integrity));
+      await fs.promises.rm(tmp, { recursive: true, force: true });
+      await fs.promises.mkdir(tmp, { recursive: true });
+      await tar.extract({ file: tgz, cwd: tmp, strip: 1 }); // npm tarballs prefix entries with package/
+      try {
+        await fs.promises.rename(tmp, dest);
+      } catch (err) {
+        // Lost a race with another VS Code window? Identical content — fine.
+        if (await this.versionAt(dest) !== version) { throw err; }
+      }
+    } finally {
+      await fs.promises.rm(tgz, { force: true });
+      await fs.promises.rm(tmp, { recursive: true, force: true });
+    }
+  }
+
+  private async verifySha512(file: string, expectedB64: string): Promise<void> {
+    const hash = createHash("sha512");
+    await new Promise<void>((resolve, reject) => {
+      fs.createReadStream(file)
+        .on("data", (chunk) => hash.update(chunk))
+        .on("end", () => resolve())
+        .on("error", reject);
+    });
+    if (hash.digest("base64") !== expectedB64) {
+      throw new Error("blink: CUDA package failed integrity verification");
+    }
+  }
+
+  /** Point <extensionRoot>/node_modules/@node-llama-cpp/<variant> at storage. */
+  private async link(variant: string, version: string): Promise<void> {
+    const linkPath = this.linkPath(variant);
+    const target = this.storedDir(version, variant);
+    try {
+      const st = await fs.promises.lstat(linkPath);
+      if (st.isSymbolicLink()
+        && path.resolve(await fs.promises.readlink(linkPath)) === path.resolve(target)) {
+        return; // already correct
+      }
+      await fs.promises.rm(linkPath, { recursive: true, force: true });
+    } catch {
+      // linkPath doesn't exist — create below
+    }
+    await fs.promises.mkdir(path.dirname(linkPath), { recursive: true });
+    // "junction" needs no admin on Windows; the type arg is ignored on POSIX.
+    await fs.promises.symlink(target, linkPath, "junction");
+  }
+
+  /** Keep only the pinned version's dir in storage. */
+  private async gc(keepVersion: string): Promise<void> {
+    let entries: fs.Dirent[];
+    try {
+      entries = await fs.promises.readdir(this.opts.storageDir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const e of entries) {
+      if (e.isDirectory() && e.name !== keepVersion) {
+        await fs.promises.rm(path.join(this.opts.storageDir, e.name), { recursive: true, force: true });
+      }
+    }
   }
 }
