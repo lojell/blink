@@ -29,6 +29,12 @@ export class Commands implements ICommands {
       vscode.commands.registerCommand("blink.switchModel", () => this.setup.showPicker()),
       vscode.commands.registerCommand("blink.enable", () => this.config.setEnabled(true)),
       vscode.commands.registerCommand("blink.disable", () => this.config.setEnabled(false)),
+      vscode.commands.registerCommand("blink.disableForFileType", (pattern: unknown) => {
+        if (typeof pattern === "string" && pattern) { void this.config.addDisabledFile(pattern); }
+      }),
+      vscode.commands.registerCommand("blink.enableForFileType", (pattern: unknown) => {
+        if (typeof pattern === "string" && pattern) { void this.config.removeDisabledFile(pattern); }
+      }),
       vscode.commands.registerCommand(DID_ACCEPT_COMMAND, () => this.metrics.recordAccepted()),
       vscode.commands.registerCommand("blink.showMetrics", () => this.log.info(this.metrics.format())),
     );
