@@ -3,7 +3,6 @@ import type { ModelConfig } from "../config/models.js";
 import type { CompletionClient } from "../clients/types.js";
 import { CompletionCache } from "../cache.js";
 import { assembleContext } from "./contextAssembler.js";
-// import { buildPrompt } from "./promptBuilder.js";
 import { postProcess } from "./postProcess.js";
 import type { Cancellable } from "../provider/debounce.js";
 import type { ContextFile } from "../edits/editTracker.js";

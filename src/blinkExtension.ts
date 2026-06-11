@@ -8,6 +8,8 @@ import { IInlineCompletionItemProvider } from "./provider/inlineProvider.js";
 import { ISetupController } from "./setup/setupController.js";
 import { ICudaController } from "./setup/cudaController.js";
 import { token, Inject } from "./di/container.js";
+import { IEditTracker } from "./edits/editTracker.js";
+import { ICommands } from "./commands.js";
 
 export interface IStatusBar {
   create(): void;
@@ -32,6 +34,8 @@ export class BlinkExtension {
     @ILspContextProvider private readonly lsp: ILspContextProvider,
     @ISetupController private readonly setup: ISetupController,
     @ICudaController private readonly cuda: ICudaController,
+    @IEditTracker private readonly edits: IEditTracker,
+    @ICommands private readonly commands: ICommands,
   ) {}
 
   start(): void {
@@ -40,6 +44,8 @@ export class BlinkExtension {
     void this.cuda.ensureLinks();
     this.inlineProvider.register();
     this.statusBar.create();
+    this.edits.register();
+    this.commands.register();
     this.clients.onLoadError(() => this.status.setError("model load failed"));
     this.cuda.onInstalled(() => {
       // Drop the Vulkan-loaded engine so the next completion loads via CUDA.

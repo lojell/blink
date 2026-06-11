@@ -1,4 +1,8 @@
+import * as vscode from "vscode";
+import { ILogger } from "../common/logging.js";
+import { IConfigProvider } from "../config/config.js";
 import { token } from "../di/container.js";
+import { ExtensionContext } from "../di/vscodeTokens.js";
 
 export interface ContextFile {
   path: string;
@@ -33,6 +37,7 @@ export function expandRange(
 }
 
 export interface IEditTracker {
+  register(): void;
   record(region: EditRegion): void;
   select(excludePath: string | undefined, maxSnippets: number, maxChars: number): ContextFile[];
 }
@@ -47,6 +52,53 @@ export const IEditTracker = token<IEditTracker>("editTracker");
  */
 export class EditTracker implements IEditTracker {
   private regions: EditRegion[] = [];
+  constructor(
+    @ExtensionContext private readonly context: vscode.ExtensionContext,
+    @IConfigProvider private readonly config: IConfigProvider,
+    @ILogger private readonly log: ILogger,
+  ) {
+    this.log = log;
+    this.config = config;
+  }
+
+  register() {
+    let editSeq = 0;
+    this.context.subscriptions.push(
+      vscode.workspace.onDidChangeTextDocument((e) => {
+        try {
+          if (
+            e.document.uri.scheme !== "file" ||
+            e.document.isUntitled ||
+            e.contentChanges.length === 0
+          ) {
+            return;
+          }
+          let startLine = Number.MAX_SAFE_INTEGER;
+          let endLine = 0;
+          for (const c of e.contentChanges) {
+            startLine = Math.min(startLine, c.range.start.line);
+            endLine = Math.max(endLine, c.range.end.line);
+          }
+          const span = expandRange(startLine, endLine, e.document.lineCount, 2);
+          const range = new vscode.Range(
+            span.startLine,
+            0,
+            span.endLine,
+            e.document.lineAt(span.endLine).text.length,
+          );
+          this.record({
+            path: vscode.workspace.asRelativePath(e.document.uri),
+            startLine: span.startLine,
+            endLine: span.endLine,
+            text: e.document.getText(range),
+            seq: ++editSeq,
+          });
+        } catch (err) {
+          this.log.info(`edit tracker error: ${String(err)}`);
+        }
+      })
+    )
+  }
 
   record(region: EditRegion): void {
     // Coalesce: an overlapping or directly-adjacent same-file region replaces

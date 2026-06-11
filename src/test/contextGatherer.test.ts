@@ -6,7 +6,7 @@ import type { ContextFile } from "../edits/editTracker.js";
 import { globalConfig } from "./fixtures.js";
 
 function fakeEdits(out: ContextFile[]): IEditTracker {
-  return { record() {}, select: () => out };
+  return { register() {}, record() {}, select: () => out };
 }
 function fakeLsp(out: ContextFile[]): ILspContextProvider {
   return { collect: async () => out, clear() {} };

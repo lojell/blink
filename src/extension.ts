@@ -7,10 +7,9 @@ import { CompletionCache } from "./cache.js";
 import { CompletionEngine, ICompletionEngine } from "./completion/completionEngine.js";
 import { Metrics } from "./metrics.js";
 import { EditTracker, IEditTracker } from "./edits/editTracker.js";
-import { registerEditTracking } from "./edits/editTrackerAdapter.js";
 import { LspContextProvider, ILspContextProvider } from "./context/lspContext.js";
 import { CompletionComposer, ICompletionComposer } from "./context/composer.js";
-import { BlinkInlineProvider, DID_ACCEPT_COMMAND, IInlineCompletionItemProvider } from "./provider/inlineProvider.js";
+import { BlinkInlineProvider, IInlineCompletionItemProvider } from "./provider/inlineProvider.js";
 import { StatusStore } from "./status/statusStore.js";
 import { BlinkStatusBar } from "./status/statusBar.js";
 import { Logger, ILogger } from "./common/logger.js";
@@ -18,6 +17,7 @@ import { BlinkExtension, IStatusBar } from "./blinkExtension.js";
 import { FimTemplates } from "./completion/fimTemplates.js";
 import { ModelDownloader, IModelDownloader } from "./setup/modelDownloader.js";
 import { SetupController, ISetupController } from "./setup/setupController.js";
+import { Commands, ICommands } from "./commands.js";
 import { CudaInstaller, ICudaInstaller } from "./setup/cudaInstaller.js";
 import { CudaController, ICudaController } from "./setup/cudaController.js";
 import { Container } from "./di/container.js";
@@ -55,20 +55,11 @@ export function activate(context: vscode.ExtensionContext) {
     }));
     c.register(ICudaController, CudaController);
     c.register(ISetupController, SetupController);
+    c.register(ICommands, Commands);
     c.register(BlinkExtension);
 
     blink = c.get(BlinkExtension);
     blink.start();
-
-    const metrics = c.get(Metrics);
-    context.subscriptions.push(
-      registerEditTracking(c.get(IEditTracker), c.get(ILogger)),
-      vscode.commands.registerCommand("blink.switchModel", () => c.get(ISetupController).showPicker()),
-      vscode.commands.registerCommand("blink.enable", () => c.get(IConfigProvider).setEnabled(true)),
-      vscode.commands.registerCommand("blink.disable", () => c.get(IConfigProvider).setEnabled(false)),
-      vscode.commands.registerCommand(DID_ACCEPT_COMMAND, () => metrics.recordAccepted()),
-      vscode.commands.registerCommand("blink.showMetrics", () => logger.info(metrics.format())),
-    );
 
     logger.info("blink activated");
   } catch (error) {

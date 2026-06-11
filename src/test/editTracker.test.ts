@@ -5,6 +5,12 @@ function region(path: string, startLine: number, endLine: number, text: string, 
   return { path, startLine, endLine, text, seq };
 }
 
+// record()/select() never touch the injected deps (context/config/logger are
+// only used by register()), so stubs are safe here.
+function makeTracker() {
+  return new EditTracker(null as never, null as never, null as never);
+}
+
 suite("expandRange", () => {
   test("pads and clamps to document bounds", () => {
     assert.deepStrictEqual(expandRange(5, 6, 100, 2), { startLine: 3, endLine: 8 });
@@ -21,7 +27,7 @@ suite("expandRange", () => {
 
 suite("EditTracker", () => {
   test("coalesces an overlapping same-file edit (refreshes text + recency)", () => {
-    const t = new EditTracker();
+    const t = makeTracker();
     t.record(region("a.ts", 10, 12, "old", 1));
     t.record(region("a.ts", 11, 13, "new", 2)); // overlaps -> replace
     const out = t.select(undefined, 10, 10000);
@@ -30,14 +36,14 @@ suite("EditTracker", () => {
   });
 
   test("treats adjacent lines as the same region", () => {
-    const t = new EditTracker();
+    const t = makeTracker();
     t.record(region("a.ts", 10, 11, "x", 1));
     t.record(region("a.ts", 12, 13, "y", 2)); // abuts (11 and 12) -> replace
     assert.strictEqual(t.select(undefined, 10, 10000).length, 1);
   });
 
   test("keeps distinct regions and different files separate", () => {
-    const t = new EditTracker();
+    const t = makeTracker();
     t.record(region("a.ts", 0, 1, "a", 1));
     t.record(region("a.ts", 50, 51, "b", 2)); // far apart
     t.record(region("b.ts", 0, 1, "c", 3));    // different file
@@ -45,7 +51,7 @@ suite("EditTracker", () => {
   });
 
   test("evicts oldest beyond the cap", () => {
-    const t = new EditTracker();
+    const t = makeTracker();
     for (let i = 0; i <= 20; i++) {
       t.record(region(`f${i}.ts`, 0, 0, `c${i}`, i + 1)); // 21 distinct files
     }
@@ -57,7 +63,7 @@ suite("EditTracker", () => {
   });
 
   test("select excludes the current file and returns oldest-first within budget", () => {
-    const t = new EditTracker();
+    const t = makeTracker();
     t.record(region("a.ts", 0, 0, "AA", 1));
     t.record(region("b.ts", 0, 0, "BB", 2));
     t.record(region("cur.ts", 0, 0, "CC", 3));
@@ -69,7 +75,7 @@ suite("EditTracker", () => {
   });
 
   test("select honors maxSnippets (keeping the most recent)", () => {
-    const t = new EditTracker();
+    const t = makeTracker();
     t.record(region("a.ts", 0, 0, "AA", 1));
     t.record(region("b.ts", 0, 0, "BB", 2));
     t.record(region("c.ts", 0, 0, "CC", 3));
@@ -81,7 +87,7 @@ suite("EditTracker", () => {
   });
 
   test("select skips a snippet that would breach maxChars", () => {
-    const t = new EditTracker();
+    const t = makeTracker();
     t.record(region("a.ts", 0, 0, "12345", 1));
     t.record(region("b.ts", 0, 0, "12345", 2));
     const out = t.select(undefined, 10, 6); // 5 fits, +5 would be 10 > 6 -> skip
