@@ -1,12 +1,34 @@
 # blink — Local AI Code Completions
 
-Lightning-fast inline AI completions (ghost text) for VS Code — **local-first**
-and **bring-your-own-key**. Run a GGUF code model **in-process** via
-[llama.cpp](https://github.com/ggml-org/llama.cpp) — no server, no account, no
-cloud — or point blink at any OpenAI-compatible `/v1/completions` endpoint.
+**AI ghost text that appears in a blink — running entirely on your machine.**
 
-<!-- TODO(user): record the hero demo and un-comment:
-![blink completing code](media/demo.gif) -->
+blink brings lightning-fast inline completions to VS Code, **local-first** and
+**bring-your-own-key**. Run a GGUF code model **in-process** via
+[llama.cpp](https://github.com/ggml-org/llama.cpp) — no server, no account, no
+cloud, no subscription — or point blink at any OpenAI-compatible
+`/v1/completions` endpoint with your own key.
+
+![blink completing code in VS Code](media/blink.gif)
+
+## Quick start
+
+1. Install blink and open any code file.
+2. Run **blink: Select Model…** (Command Palette, or click the blink status
+   bar item) and pick a recommended model — blink downloads it with progress.
+3. Type. Ghost text appears; press `Tab` to accept.
+
+That's it — no API key, no account, no setup beyond picking a model. To use
+your own endpoint instead, add an entry to `blink.models` (below) and select
+it via **blink: Select Model…** or the `blink.model` setting.
+
+## Why blink?
+
+- **Private by default** — with a local model, your code never leaves your
+  machine. No telemetry, ever.
+- **Genuinely fast** — the model runs inside VS Code's process with native
+  fill-in-the-middle (FIM), not chat prompting over the network.
+- **Yours to configure** — local GGUF or any OpenAI-compatible endpoint,
+  switchable in two clicks.
 
 ## Features
 
@@ -24,16 +46,6 @@ cloud — or point blink at any OpenAI-compatible `/v1/completions` endpoint.
   **CUDA** download (~580 MB) for peak throughput.
 - **Status bar control** — live state plus hover actions: settings, model
   switch, enable/disable.
-
-## Quick start
-
-1. Install blink and open any code file.
-2. Run **blink: Select Model…** (Command Palette, or click the blink status
-   bar item) and pick a recommended model — blink downloads it with progress.
-3. Type. Ghost text appears; press `Tab` to accept.
-
-To use your own endpoint instead, add an entry to `blink.models` (below) and
-select it via **blink: Select Model…** or the `blink.model` setting.
 
 ## Requirements
 
