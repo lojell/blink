@@ -20,7 +20,8 @@ cloud — or point blink at any OpenAI-compatible `/v1/completions` endpoint.
 - **Model registry** — configure several models once, switch instantly with
   **blink: Select Model…** from the palette or the status bar.
 - **GPU out of the box** — Vulkan on Windows/Linux x64, Metal on Apple
-  Silicon; CPU works everywhere.
+  Silicon; CPU works everywhere. On NVIDIA machines blink offers a one-click
+  **CUDA** download (~580 MB) for peak throughput.
 - **Status bar control** — live state plus hover actions: settings, model
   switch, enable/disable.
 
@@ -88,8 +89,9 @@ One registry entry per model; the two backends:
 
 ## Known limitations (v0.1)
 
-- **No CUDA build** — NVIDIA GPUs are served by Vulkan (solid, if short of
-  peak CUDA throughput). CUDA is on the radar.
+- **CUDA is a separate download** — the VSIX ships Vulkan (which already
+  accelerates NVIDIA); blink offers the ~580 MB CUDA binaries when it detects
+  an NVIDIA GPU, or via **blink: Select Model…**.
 - **No ollama backend yet** — point the `openai` backend at any
   OpenAI-compatible server instead.
 - Completions only — blink is not a chat assistant.

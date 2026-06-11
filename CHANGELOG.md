@@ -1,5 +1,13 @@
 # Change Log
 
+## [Unreleased]
+
+- CUDA acceleration via one-click runtime download (Windows/Linux x64,
+  NVIDIA): blink offers the prebuilt CUDA binaries (~580 MB) when it detects
+  an NVIDIA GPU, verifies them against the npm registry, and survives
+  extension updates without re-downloading. `"cuda"` is back in the `gpu`
+  setting enum.
+
 ## [0.1.0] — 2026-06-10
 
 Initial release.
