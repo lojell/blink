@@ -58,4 +58,36 @@ suite("renderTooltipMarkdown", () => {
     assert.ok(md.includes("[$(blink-logo) Enable](command:blink.enable)"));
     assert.ok(!md.includes("command:blink.disable"));
   });
+
+  test("offers 'Disable for <pattern>' when the active file is not blacklisted", () => {
+    const md = renderTooltipMarkdown(display({ filePattern: "*.ts", matchedPattern: null }), "0.1.0");
+    const arg = encodeURIComponent(JSON.stringify(["*.ts"]));
+    assert.ok(md.includes(`[$(blink-disabled) Disable for *.ts](command:blink.disableForFileType?${arg})`));
+    assert.ok(!md.includes("command:blink.enableForFileType"));
+  });
+
+  test("offers 'Enable for <pattern>' when the active file is blacklisted", () => {
+    const md = renderTooltipMarkdown(display({ filePattern: "*.md", matchedPattern: "*.md" }), "0.1.0");
+    const arg = encodeURIComponent(JSON.stringify(["*.md"]));
+    assert.ok(md.includes(`[$(blink-logo) Enable for *.md](command:blink.enableForFileType?${arg})`));
+    assert.ok(!md.includes("command:blink.disableForFileType"));
+  });
+
+  test("the enable link targets the matched entry, not the file's own pattern", () => {
+    // notes.md blocked by a broader entry: removing must remove that entry.
+    const md = renderTooltipMarkdown(display({ filePattern: "*.md", matchedPattern: "notes.*" }), "0.1.0");
+    const arg = encodeURIComponent(JSON.stringify(["notes.*"]));
+    assert.ok(md.includes(`[$(blink-logo) Enable for notes.*](command:blink.enableForFileType?${arg})`));
+  });
+
+  test("omits the file toggle when there is no active file editor", () => {
+    const md = renderTooltipMarkdown(display({ filePattern: null, matchedPattern: null }), "0.1.0");
+    assert.ok(!md.includes("Disable for"));
+    assert.ok(!md.includes("Enable for"));
+  });
+
+  test("file toggle joins the actions row (still three rows total)", () => {
+    const md = renderTooltipMarkdown(display({ filePattern: "*.ts", matchedPattern: null }), "0.1.0");
+    assert.strictEqual(md.split("\n\n---\n\n").length, 3);
+  });
 });
