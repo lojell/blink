@@ -135,12 +135,13 @@
                 "type": "string",
                 "enum": [
                   "auto",
+                  "cuda",
                   "vulkan",
                   "metal",
                   "off"
                 ],
                 "default": "auto",
-                "description": "llamacpp: GPU backend."
+                "description": "llamacpp: GPU backend. \"cuda\" needs the CUDA binaries — on NVIDIA machines blink offers to download them (~580 MB); \"auto\" uses them automatically once installed."
               },
               "apiBaseUrl": {
                 "type": "string",
@@ -214,6 +215,7 @@
     "typescript-eslint": "^8.56.1"
   },
   "dependencies": {
-    "node-llama-cpp": "^3.18.1"
+    "node-llama-cpp": "^3.18.1",
+    "tar": "^7.5.16"
   }
 }
