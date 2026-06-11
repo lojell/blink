@@ -54,6 +54,7 @@ src/
   config/
     config.ts               BlinkConfig (model registry) + IConfigProvider/BlinkConfigProvider (the single settings reader)
     models.ts               ModelConfig per-backend union + resolveActiveModel/isModelConfigured/modelTarget (pure)
+    fileBlacklist.ts        disabledFiles glob matcher + patternForFile (pure)
   clients/
     types.ts                CompletionClient (engine seam) + ManagedClient (setConfig/onLoadError/dispose)
     backends.ts             BackendRegistry(logger): backend -> client factory map (no switch); throws for ollama
@@ -86,6 +87,7 @@ src/
     statusStore.ts          single source of truth for status (pure, getDisplay())
     tooltip.ts              hover tooltip markdown (pure)
     statusBar.ts            BlinkStatusBar bound to the store (vscode)
+    activeFileMonitor.ts    syncs active editor + disabledFiles into the store (vscode)
 media/                      blink*.svg glyph sources + generated blink.woff (status bar icon font) + icon.png (store icon)
 scripts/build-icon-font.mjs SVG -> woff generator
 scripts/build-icon-png.mjs  SVG -> 256x256 PNG store icon
@@ -166,6 +168,11 @@ Model…** (also offered via a first-run notification and the status bar when no
 models are configured yet). `blink.showMetrics` / `blink.showLastPrompt` are
 registered but hidden from the palette (metrics records accepts only; the last
 prompt is never set).
+
+Completions can be turned off per file type via the `blink.disabledFiles`
+glob blacklist (default markdown); the status bar tooltip offers
+"Disable for *.ts" / "Enable for *.md" for the active file
+(`blink.disableForFileType` / `blink.enableForFileType`, tooltip-only).
 
 ## Gotchas
 
