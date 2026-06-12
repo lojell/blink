@@ -8,7 +8,7 @@ Blink brings lightning-fast inline completions to VS Code, **local-first** and
 cloud, no subscription — or point Blink at any OpenAI-compatible
 `/v1/completions` endpoint with your own key.
 
-![Blink completing code in VS Code](media/Blink.gif)
+![Blink completing code in VS Code](media/blink.gif)
 
 ## Quick start
 
